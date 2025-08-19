@@ -5,6 +5,9 @@ import pycountry
 import json
 import warnings
 import duckdb
+import logging
+
+logging.basicConfig(level=logging.INFO, force=True)
 
 warnings.filterwarnings('ignore')  # Suppress all warning
 
@@ -131,8 +134,8 @@ def lookup_alpha_3(country_name):
     except Exception as e:
         unknown = "UNK"
         country_name = "Unknown"
+        logging.warning(f"Failed to find country: {country_name}")
         return unknown, country_name
-        print(f"Failed to find country: {country_name}")
 
 def create_df_from_rows(con, rows):
     
@@ -214,6 +217,7 @@ def get_table_from_nuffic(countries):
                     con = mapped_con
                 df = create_df_from_rows(con=con, rows=rows)
                 dfs.append(df)
+                logging.info(f"Created -> {con}")
             else:
                 url = f"https://www.nuffic.nl/en/education-systems/{con.lower()}"
                 page = requests.get(url, verify=False)
@@ -234,12 +238,15 @@ def get_table_from_nuffic(countries):
                     con = mapped_con
                 df = create_df_from_rows(con=con, rows=rows)
                 dfs.append(df)
+                logging.info(f"Created -> {con}")
         except Exception as e:
-            print(f"Failed on -> {con}")
+            logging.warning(f"Failed on -> {con}")
             pass
     
     df = pd.concat(dfs)
     duck_con.sql("create or replace table equivalencies as select * from df;")
+    logging.info(f"Created equivalencies table")
     duck_con.close()
+    logging.info(f"Process complete")
 
 dfs = get_table_from_nuffic(countries)
